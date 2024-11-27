@@ -1,0 +1,16 @@
+.forgotPassBtn {
+    border: none;
+}
+
+.emailInput,
+.passInput {
+    width: 250px;
+    padding: 10px;
+}
+
+.loginBtn {
+    width: 200px;
+    border-radius: 25px;
+    border: none;
+    padding: 10px;
+}

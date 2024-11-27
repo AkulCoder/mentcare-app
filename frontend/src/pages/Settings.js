@@ -1,0 +1,509 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+// import io from 'socket.io-client';
+import { DashboardCard, DashboardCardTitleless } from '../components/DashboardCards.js';
+import './styles/Settings.css'
+import defaultProfilePic from '../pages/assets/images/default-profile-pic.jpg';
+import undoBtn from '../pages/assets/images/undo-btn.png';
+
+import { styled } from '@mui/material/styles';
+import Button from '@mui/material/Button';
+
+const VisuallyHiddenInput = styled('input')({
+    clip: 'rect(0 0 0 0)',
+    clipPath: 'inset(50%)',
+    height: 1,
+    overflow: 'hidden',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    whiteSpace: 'nowrap',
+    width: 1,
+});
+
+
+// const socket = io('http://localhost:5000');
+
+function SettingsPage() {
+    const [userName, setUserName] = useState();
+    const [userNameUpd, setUserNameUpd] = useState("");
+
+    const [email, setEmail] = useState();
+    const [emailUpd, setEmailUpd] = useState("");
+
+    const [pfp, setPfp] = useState();
+    const [pfpUpd, setPfpUpd] = useState();
+    const [pfpFile, setPfpFile] = useState();
+
+    const [insComp, setInsComp] = useState();
+    const [insID, setInsID] = useState();
+    const [insTier, setInsTier] = useState();
+
+    const [insCompUpd, setInsCompUpd] = useState("");
+    const [insIDUpd, setInsIDUpd] = useState("");
+    const [insTierUpd, setInsTierUpd] = useState("");
+
+    const [patientPrivacy, setPatientPrivacy] = useState();
+    const [accountActive, setAccountActive] = useState(null);
+    const [accActionClass, setAccActionClass] = useState("settings-acc-action-btn");
+    const [words, setWords] = useState();
+    const accDeetsPopupRef = useRef(null);
+    const insInfoPopupRef = useRef(null);
+    const patientRef = useRef(null);
+    const navigate = useNavigate();
+
+
+    useEffect(() => {
+        const realUserID = localStorage.getItem("realUserID");
+        const userID = localStorage.getItem("userID");
+        const userType = localStorage.getItem("userType");
+        if (userType === "Patient") {
+            patientRef.current.className = "";
+        }
+
+        fetch('http://localhost:5000/settingsAccountData', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ realUserID: realUserID, userID: userID, userType: userType }),
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log("data", data);
+                setUserName(data.userName);
+                setUserNameUpd(data.userName);
+
+                setEmail(data.email);
+                setEmailUpd(data.email);
+
+                setPatientPrivacy(data.patientPrivacy);
+
+                setInsComp(data.insComp);
+                setInsCompUpd(data.insComp);
+
+                setInsID(data.insID);
+                setInsIDUpd(data.insID);
+
+                setInsTier(data.insTier);
+                setInsTierUpd(data.insTier);
+
+                setAccountActive(data.isActive);
+            })
+            .catch(err => console.error('Error fetching data:', err));
+
+        let imageExists = false;
+        fetch("http://localhost:5000/retriveProfilePic", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",  // Ensure the request is sent as JSON
+            },
+            body: JSON.stringify({ realUserID }),
+        })
+            .then((res) => {
+                if (res.ok) {
+                    imageExists = true;
+                }
+                return res.blob();
+            })
+            .then((data) => {
+                if (imageExists) {
+                    const imageUrl = URL.createObjectURL(data);
+                    // console.log("Image Blob:", data);
+                    // console.log("Image URL:", imageUrl);
+                    setPfp(imageUrl);
+                    setPfpUpd(imageUrl);
+                    imageExists = false;
+                }
+                else {
+                    setPfp(defaultProfilePic);
+                    setPfpUpd(defaultProfilePic);
+                }
+            })
+            .catch((error) => {
+                console.error("Error fetching image:", error);
+            });
+    }, []);
+
+    useEffect(() => {
+        const userType = localStorage.getItem("userType");
+
+        if (userType === "Therapist") {
+            setWords(accountActive ? "Deactivate" : "Activate");
+            if (accountActive !== null) {
+                setAccActionClass(parseInt(accountActive) ? "settings-acc-action-btn settings-red-btn" : "settings-acc-action-btn settings-green-btn")
+            }
+        }
+        else if (userType === "Patient") {
+            setWords("Delete");
+            setAccActionClass("settings-acc-action-btn settings-red-btn")
+        } else {
+            setWords("Admin");
+        }
+    }, [accountActive]);
+
+    const editAccDetails = () => {
+        accDeetsPopupRef.current.className = 'settings-popUp-background';
+    }
+
+    const cancelEditAccDetails = () => {
+        accDeetsPopupRef.current.className = 'hidden settings-popUp-background';
+        // setPfpUpd(pfp);
+        setUserNameUpd(userName);
+        setEmailUpd(email);
+    }
+
+    const saveAccDetails = async (event) => {
+        event.preventDefault();
+
+        const realUserID = localStorage.getItem("realUserID");
+        const userId = localStorage.getItem("userID");
+        const userType = localStorage.getItem("userType");
+
+        const formData = new FormData();
+        formData.append('userID', userId);
+        formData.append('userType', userType);
+        formData.append('userNameUpd', userNameUpd === "" ? userName : userNameUpd);
+        formData.append('emailUpd', emailUpd === "" ? email : emailUpd);
+        formData.append('pfpUpd', pfpFile, pfpFile.filename);
+
+        fetch('http://localhost:5000/settingsUpdAccDetails', {
+            method: 'POST',
+            body: formData,
+        })
+            .then(res => res.json())
+            .then(data => {
+                setUserName(data.userName);
+                setEmail(data.email);
+                // setPfp("Not yet implemented");
+                accDeetsPopupRef.current.className = 'hidden settings-popUp-background';
+            })
+            .catch(err => console.error('Error fetching data:', err));
+        let imageExists = false;
+        fetch("http://localhost:5000/retriveProfilePic", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",  // Ensure the request is sent as JSON
+            },
+            body: JSON.stringify({ realUserID }),
+        })
+            .then((res) => {
+                if (res.ok) {
+                    imageExists = true;
+                }
+                return res.blob();
+            })
+            .then((data) => {
+                if (imageExists) {
+                    const imageUrl = URL.createObjectURL(data);
+                    setPfp(imageUrl);
+                    setPfpUpd(imageUrl);
+                    imageExists = false;
+                }
+                else {
+                    setPfp(defaultProfilePic);
+                    setPfpUpd(defaultProfilePic);
+                }
+            })
+            .catch((error) => {
+                console.error("Error fetching image:", error);
+            });
+    }
+
+    const editInsDetails = () => {
+        insInfoPopupRef.current.className = 'settings-popUp-background';
+    }
+
+    const cancelEditInsDetails = () => {
+        insInfoPopupRef.current.className = 'hidden settings-popUp-background';
+        setInsCompUpd(insComp);
+        setInsIDUpd(insID);
+        setInsTierUpd(insTier);
+    }
+
+    const saveInsDetails = (event) => {
+        event.preventDefault();
+
+        const userId = localStorage.getItem("userID");
+
+        fetch('http://localhost:5000/settingsUpdInsDetails', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userId: userId, insCompUpd: insCompUpd === "" ? insComp : insCompUpd,
+                insIDUpd: insIDUpd === "" ? insID : insIDUpd, insTierUpd: insTierUpd === "" ? insTier : insTierUpd
+            }),
+        })
+            .then(res => res.json())
+            .then(data => {
+                setInsComp(data.insComp);
+                setInsID(data.insID);
+                setInsTier(data.insTier);
+                insInfoPopupRef.current.className = 'hidden popUp-background';
+            })
+            .catch(err => console.error('Error fetching data:', err));
+    }
+
+    const privacyHandler = (event) => {
+        setPatientPrivacy(event.target.value);
+        const userId = localStorage.getItem("userID");
+
+        fetch('http://localhost:5000/settingsUpdPrivacy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: userId, patientPrivacy: event.target.value }),
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log(data);
+            })
+            .catch(err => console.error('Error fetching data:', err));
+    }
+
+    const accountChangeHandler = (words) => {
+        const userId = localStorage.getItem("userID");
+        const userType = localStorage.getItem("userType");
+
+        fetch('http://localhost:5000/settingsRemoveAccount', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: userId, userType: userType }),
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log(data);
+                if (userType === 'Therapist' && words === 'Deactivate') {
+                    localStorage.setItem("isActive", data.isActive);
+                    navigate('/deactivated');
+                    return;
+                }
+                else if (userType === 'Therapist' && words === 'Activate') {
+                    localStorage.setItem("isActive", data.isActive);
+                    setAccActionClass("settings-acc-action-btn settings-red-btn");
+                    setWords("DEACTIVATE");
+                    navigate("/settings");
+                    return;
+                }
+                localStorage.setItem("userID", 0);
+                navigate('/')
+            })
+            .catch(err => console.error('Error fetching data:', err));
+    }
+
+    function resetInput(e, field) {
+        // if (field === 'name') {
+        //     setUserNameUpd(userName);
+        //     e.target.parentElement.parentElement.children[0].value = userName;
+        // }
+        // else if (field === 'email') {
+        //     setEmailUpd(email);
+        //     e.target.parentElement.parentElement.children[0].value = email;
+        // }
+
+        switch (field) {
+            case 'name':
+                setUserNameUpd(userName);
+                e.target.parentElement.parentElement.children[0].value = userName;
+                break;
+            case 'email':
+                setEmailUpd(email);
+                e.target.parentElement.parentElement.children[0].value = email;
+                break;
+            case 'insComp':
+                setInsCompUpd(insComp);
+                e.target.parentElement.parentElement.children[0].value = insComp;
+                break;
+            case 'insID':
+                setInsIDUpd(insID);
+                e.target.parentElement.parentElement.children[0].value = insID;
+                break;
+            case 'insTier':
+                setInsTierUpd(insTier);
+                e.target.parentElement.parentElement.children[0].value = insTier;
+                break
+            default:
+                console.log("Something went wrong when resetting insurance details!)");
+                break;
+        }
+    }
+
+    function handleImageFileChange(e) {
+        const file = e.target.files[0]; // Get the first file
+        if (file) {
+            const fileURL = URL.createObjectURL(file);
+            setPfpUpd(fileURL);
+            setPfpFile(file);
+        }
+    }
+
+    return (
+        <div className='settings-main-container'>
+            <div className="flex-col flex-centered">
+                <DashboardCardTitleless>
+                    <div className='flex-col flex-centered'>
+                        <h1>Account Details</h1>
+                        <div className='flex-row flex-centered' style={{ gap: "20px" }}>
+                            {pfp ? (
+                                <div className="centered settings-img-circle-mask">
+                                    <img src={pfp} alt="Profile" className="settings-profile-pic" />
+                                </div>
+                            ) : (
+                                <div className="centered settings-img-circle-mask">
+                                    <img src={defaultProfilePic} alt="Profile" className="settings-profile-pic" />
+                                </div>
+                            )}
+                            <div className='flex-row' style={{ textAlign: "right", gap: "10px" }}>
+                                <div className='flex-col'>
+                                    <p>Name:</p>
+                                    <p>Email:</p>
+                                </div>
+                                <div className='flex-col' style={{ textAlign: "left" }}>
+                                    <p>{userName}</p>
+                                    <p>{email}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button className='settings-btn' type="button" onClick={() => editAccDetails()}>Edit Details</button>
+                    </div>
+                    <div ref={patientRef} className="hidden settings-popUp-background">
+                        <label htmlFor="theme">Allow therpists to see old records?</label><br />
+                        <select name="theme" id="theme" defaultValue={patientPrivacy} onChange={(event) => privacyHandler(event)}>
+                            <option value="False">No</option>
+                            <option value="True">Yes</option>
+                        </select>
+                        <hr style={{ "width": "100%", "height": "4px", "border": "none", "marginTop": "25px", "marginBottom": "-10px", "backgroundColor": "black" }} />
+                        <h1>Insurance Information</h1>
+                        <div className='flex-row' style={{ gap: "10px" }}>
+                            <div className='flex-col' style={{ textAlign: "right" }}>
+                                <p>Insurance Company:</p>
+                                <p>Insurance ID:</p>
+                                <p>Insurance Tier:</p>
+                            </div>
+                            <div className='flex-col' style={{ textAlign: "left" }}>
+                                <p>{insComp}</p>
+                                <p>{insID}</p>
+                                <p>{insTier}</p>
+                            </div>
+                        </div>
+                        <button className='settings-btn' type="button" onClick={() => editInsDetails()}>Edit Details</button>
+                    </div>
+                    <hr style={{ "width": "100%", "height": "4px", "border": "none", "marginTop": "25px", "marginBottom": "-10px", "backgroundColor": "black" }} />
+                    <h1>Appearance</h1>
+                    <label htmlFor="theme">Choose a theme:</label><br />
+                    <select name="theme" id="theme">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </DashboardCardTitleless>
+                <br /><br />
+                <button className={accActionClass} type="button" onClick={() => accountChangeHandler(words)}>{words} Account</button> {/* TODO: Make this a big red button */}
+            </div>
+
+            <div ref={accDeetsPopupRef} className="hidden settings-popUp-background">
+                <div className="settings-popUp flex-row flex-centered">
+                    <h1>EDITING DETAILS</h1>
+                    <form onSubmit={(event) => saveAccDetails(event)} className='flex-col settings-upd-details-container' style={{ gap: "40px" }}>
+                        <div className='flex-row' style={{ gap: "40px" }}>
+                            <div className='settings-profile-pic-container flex-col flex-centered'>
+                                <div className="settings-img-circle-mask">
+                                    <img src={pfpUpd} alt='PROFILE PIC' height={100} width={100} className="settings-profile-pic" />
+                                </div>
+                                {/* <div>Upload Profile Picture</div>
+                                <input type="file" style={{ width: "180px" }} onChange={(e) => handleImageFileChange(e)} /> */}
+                                <Button
+                                    component="label"
+                                    role={undefined}
+                                    variant="contained"
+                                    tabIndex={-1}
+                                    size="small"
+                                >
+                                    Upload Picture
+                                    <VisuallyHiddenInput
+                                        type="file"
+                                        onChange={(e) => handleImageFileChange(e)}
+                                        multiple
+                                    />
+                                </Button>
+                            </div>
+                            <div className='flex-col flex-centered' style={{ gap: "20px" }}>
+                                <div className='flex-col' style={{ gap: "5px" }}>
+                                    <label>New Name:</label>
+                                    <div className='flex-row flex-centered' style={{ height: "30px", gap: "10px" }}>
+                                        <input className='settings-text-input' type="text" id="nameBox" name="nameBox" placeholder="Name" value={userNameUpd} onChange={(event) => event.target.value !== '' ? setUserNameUpd(event.target.value) : setUserNameUpd('')} />
+                                        <div className='settings-undo-btn-container'>
+                                            <img src={undoBtn} alt='undo-btn' onClick={(e) => resetInput(e, 'name')} style={{ height: "100%", width: "auto" }} ></img>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className='flex-col' style={{ gap: "5px" }}>
+                                    <label>New Email:</label>
+                                    <div className='flex-row' style={{ height: "30px", gap: "10px" }}>
+                                        <input className='settings-text-input' type="text" id="emailBox" name="emailBox" placeholder="Email" value={emailUpd} onChange={(event) => event.target.value !== '' ? setEmailUpd(event.target.value) : setEmailUpd('')} />
+                                        <div className='settings-undo-btn-container'>
+                                            <img src={undoBtn} alt='undo-btn' onClick={(e) => resetInput(e, 'email')} style={{ height: "100%", width: "auto" }} ></img>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {/* <input type="text" id="pfpBox" name="pfpBox" placeholder="PFP URL" defaultValue={pfp} onChange={(event) => event.target.value !== '' ? setPfpUpd(event.target.value) : setPfpUpd('')} /> */}
+                        <div className="flex-row flex-centered" style={{ gap: "10px" }}>
+                            <input className='settings-btn' type="submit" value="Save Details" />
+                            <button className='settings-btn' type="button" onClick={() => cancelEditAccDetails()}>Cancel Details</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div ref={insInfoPopupRef} className="hidden settings-popUp-background">
+                <div className="settings-popUp flex-row flex-centered">
+                    <h1>EDITING DETAILS</h1>
+                    <form onSubmit={(event) => saveInsDetails(event)} className='flex-col settings-upd-details-container' style={{ gap: "40px" }}>
+                        <div className='flex-col' style={{ gap: "20px" }}>
+                            <div className='flex-col' style={{ gap: "5px" }}>
+                                <label>New Insurance Company:</label>
+                                <div className='flex-row' style={{ height: "30px", gap: "10px" }}>
+                                    <input className='settings-text-input' type="text" id="insCompBox" name="insCompBox" placeholder="Insurance Company" value={insCompUpd} onChange={(event) => event.target.value !== '' ? setInsCompUpd(event.target.value) : setInsCompUpd('')} /><br />
+                                    <div className='settings-undo-btn-container'>
+                                        <img src={undoBtn} alt='undo-btn' onClick={(e) => resetInput(e, 'insComp')} style={{ height: "100%", width: "auto" }} ></img>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className='flex-col' style={{ gap: "5px" }}>
+                                <label>New Insurance ID:</label>
+                                <div className='flex-row' style={{ height: "30px", gap: "10px" }}>
+                                    <input className='settings-text-input' type="text" id="insIDBox" name="insIDBox" placeholder="Insurance ID" value={insIDUpd} onChange={(event) => event.target.value !== '' ? setInsIDUpd(event.target.value) : setInsIDUpd('')} /><br />
+                                    <div className='settings-undo-btn-container'>
+                                        <img src={undoBtn} alt='undo-btn' onClick={(e) => resetInput(e, 'insID')} style={{ height: "100%", width: "auto" }} ></img>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className='flex-col' style={{ gap: "5px" }}>
+                                <label>New Insurance Tier:</label>
+                                <div className='flex-row' style={{ height: "30px", gap: "10px" }}>
+                                    <input className='settings-text-input' type="text" id="insTierBox" name="insTierBox" placeholder="Insurance Tier" value={insTierUpd} onChange={(event) => event.target.value !== '' ? setInsTierUpd(event.target.value) : setInsTierUpd('')} /><br />
+                                    <div className='settings-undo-btn-container'>
+                                        <img src={undoBtn} alt='undo-btn' onClick={(e) => resetInput(e, 'insTier')} style={{ height: "100%", width: "auto" }} ></img>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex-row flex-centered" style={{ gap: "10px" }}>
+                            <input className='settings-btn' type="submit" value="Save Details" />
+                            <button className='settings-btn' type="button" onClick={() => cancelEditInsDetails()}>Cancel Details</button>
+                        </div>
+                    </form>
+                </div>
+            </div >
+        </div >
+    );
+}
+
+export default SettingsPage;

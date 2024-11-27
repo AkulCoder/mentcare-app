@@ -1,0 +1,42 @@
+.payment-page {
+    display: flex;
+    flex-direction: column;
+    height: 110vh;
+    width: 100vw;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    font-size: small;
+    font-family: 'lato';
+}
+
+.main-container.payment-page {
+    width: 60vw;
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    white-space: nowrap;
+    background-color: rgba(87, 216, 194, 0.9);
+    border-radius: 80px;
+    box-shadow: 2px 2px 5px rgb(63, 63, 63);
+    padding: 50px;
+}
+
+.row-spacing {
+    margin-bottom: -5px;
+    align-items: center;
+    text-align: center;
+    flex: auto;
+}
+
+.row-spacing.title {
+    text-decoration: solid;
+    text-rendering: geometricPrecision;
+    text-orientation: upright;
+}
+
+.row-spacing.one {
+    justify-content: center;
+}
