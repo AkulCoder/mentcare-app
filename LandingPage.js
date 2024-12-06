@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useSpring, animated } from '@react-spring/web';
 import Slider from "react-slick";
-import ReactFlow, { Controls } from 'reactflow';
+import ReactFlow from 'reactflow';
 import 'reactflow/dist/style.css';
 import '../presets.css';
 import './styles/LandingPage.css';
@@ -33,7 +32,7 @@ function LandingPage() {
             .catch(error => console.error('Error fetching testimonials:', error));
     }, []);
 
-    // Fetch Company Data (Mission, Stages, FAQs, and Contact Info)
+    // Fetch Company Data
     useEffect(() => {
         fetch('http://127.0.0.1:5000/companydata')
             .then(response => response.json())
@@ -57,12 +56,6 @@ function LandingPage() {
             .catch(error => console.error('Error fetching company data:', error));
     }, []);
 
-    const fadeIn = useSpring({
-        from: { opacity: 0, transform: 'translateY(20px)' },
-        to: { opacity: 1, transform: 'translateY(0)' },
-        config: { duration: 800 }
-    });
-
     const sliderSettings = {
         dots: true,
         infinite: true,
@@ -81,9 +74,9 @@ function LandingPage() {
     ];
 
     const edges = [
-        { id: 'e1-2', source: '1', target: '2', animated: true },
-        { id: 'e2-3', source: '2', target: '3', animated: true },
-        { id: 'e3-4', source: '3', target: '4', animated: true }
+        { id: 'e1-2', source: '1', target: '2' },
+        { id: 'e2-3', source: '2', target: '3' },
+        { id: 'e3-4', source: '3', target: '4' }
     ];
 
     const descriptions = {
@@ -105,24 +98,11 @@ function LandingPage() {
         setExpandedFAQ(expandedFAQ === index ? null : index);
     };
 
-    // Contact Us Bouncing Animation
-    const movingContact = useSpring({
-        loop: true,
-        from: { transform: 'translateX(0%)' },
-        to: async (next) => {
-            while (true) {
-                await next({ transform: 'translateX(80%)' }); // Bounce to the right
-                await next({ transform: 'translateX(0%)' }); // Bounce back to the left
-            }
-        },
-        config: { duration: 6000 }, // Smooth animation
-    });
-
     return (
         <div className="landing-page">
             <section className="mission-and-cycle">
                 <div className="mission-container">
-                    <animated.div className="statement" style={fadeIn}>
+                    <div className="statement">
                         <h1>Our Mission</h1>
                         <p className="mission-text">{mission}</p>
                         <div className="mission-slider">
@@ -138,7 +118,7 @@ function LandingPage() {
                                 </div>
                             </Slider>
                         </div>
-                    </animated.div>
+                    </div>
                 </div>
                 <div className="flow-diagram-container">
                     <h1>Mental Health Care Cycle</h1>
@@ -152,9 +132,7 @@ function LandingPage() {
                             nodesDraggable={false}
                             nodesConnectable={false}
                             elementsSelectable={false}
-                        >
-                            <Controls />
-                        </ReactFlow>
+                        />
                         {hoveredStage && (
                             <div className="hover-description">
                                 <strong>{hoveredStage}</strong>
@@ -204,9 +182,9 @@ function LandingPage() {
 
             <section className="contact-us">
                 <h1>Contact Us</h1>
-                <animated.div style={movingContact} className="contact-running">
+                <div className="contact-static">
                     Need Assistance? Call: {contact.phone || "N/A"} or Email: {contact.email || "N/A"}
-                </animated.div>
+                </div>
             </section>
         </div>
     );
